@@ -8,6 +8,7 @@ cd ~/project/historyblob/csv
 bash ../convert-db-to-csv/convert-db-to-csv.sh
 # run script
 cd ..
+source .venv/bin/activate
 python hist2cloud.py
 # copy img to github repo
 cp wordcloud.png ../roblee04.github.io/
