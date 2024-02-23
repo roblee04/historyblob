@@ -8,6 +8,7 @@
 
 import pandas as pd
 import time
+from hdbscan import HDBSCAN
 from bertopic import BERTopic
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
@@ -23,16 +24,19 @@ df = df.dropna(subset=columns_to_check)
 
 # PREPROCESSING
 # remove all mentions of DUO and SCU
-df = df[df["title"].str.contains("Duo Security| Santa Clara University") == False]
+df = df[df["title"].str.contains("Duo Security|Santa Clara University|Gmail|gmail|messenger|chatgpt|Workday| Sign in|Redirecting|Files| New chat| Sign in - Google Accounts|Just a moment...|Apply ") == False]
 
 # remove google-search ending
-df['title'] = df['title'].str.replace(r'- Google Search$', '')
+df['title'] = df['title'].str.replace(r' - Google Search$', '')
+df['title'] = df['title'].str.replace(r' - YouTube$', '')
 
 # only capture the last 7 days. 
 time_in_week = 604800
 curr_time = int(time.time()) # dont need to be too precise, cast into int
 time_in_ms = (curr_time - time_in_week) * 1000000
 past_week_df = df[df.last_visit_date >= time_in_ms]
+
+# past_week_df = df
 
 # Select specific columns, 
 # id | url | title | last_visit_date (unix time)
@@ -51,9 +55,13 @@ docs = past_week_df['title'].tolist()
 vectorizer_model = CountVectorizer(stop_words="english")
 
 # bertopic
-topic_model = BERTopic(vectorizer_model=vectorizer_model)
-topics, probs = topic_model.fit_transform(docs)
-topic_model.reduce_topics(docs, nr_topics=10)
+# topic_model = BERTopic(vectorizer_model=vectorizer_model)
+# topics, probs = topic_model.fit_transform(docs)
+
+hdbscan_model = HDBSCAN(min_cluster_size=10, metric='euclidean', prediction_data=True)
+topic_model = BERTopic(hdbscan_model=hdbscan_model).fit(docs)
+
+topic_model.reduce_topics(docs, nr_topics=10, )
 
 # wordcloud and colors
 
@@ -72,6 +80,7 @@ def create_wordcloud(topic_model, topics, save_path=None):
     for i in range(-1, topics - 2):
         for word, value in topic_model.get_topic(i):
             text[word] = value
+            # print(word, value)
             
     # text = {word: value for word, value in topic_model.get_topic(i)}
     wc = WordCloud(color_func=custom_color_func, width=1600, height=800, background_color="white", max_words=100)
